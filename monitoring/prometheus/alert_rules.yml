@@ -1,0 +1,91 @@
+groups:
+  - name: case_study_alerts
+    rules:
+      # Service Health Alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 2 minutes."
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(flask_http_request_exceptions_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors per second over the last 5 minutes."
+
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(flask_http_request_duration_seconds_bucket[5m])) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }} seconds."
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionHigh
+        expr: postgresql_connections_active / postgresql_connections_max > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection usage high"
+          description: "PostgreSQL connection usage is {{ $value }}%."
+
+      # Redis Memory Usage
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value }}%."
+
+      # Celery Queue Backlog
+      - alert: CeleryQueueBacklog
+        expr: celery_tasks_waiting > 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue backlog detected"
+          description: "{{ $value }} tasks waiting in Celery queue for more than 15 minutes."
+
+      # Container Resource Usage
+      - alert: HighCPUUsage
+        expr: rate(node_cpu_seconds_total{mode!="idle"}[5m]) > 0.95
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}%."
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.95
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}%."
+
+      # Disk Space
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"}) < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value }}% on {{ $labels.device }}."

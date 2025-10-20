@@ -1,0 +1,160 @@
+# Custom PostgreSQL queries for usage analytics metrics
+# These queries expose UsageAnalytics table data to Prometheus
+
+# Page view metrics by route
+pg_usage_page_views:
+  query: |
+    SELECT
+      route,
+      COUNT(*) as views,
+      COUNT(DISTINCT user_id) as unique_users,
+      AVG(duration_seconds) as avg_duration_seconds
+    FROM usage_analytics
+    WHERE viewed_at >= NOW() - INTERVAL '24 hours'
+    GROUP BY route
+    ORDER BY views DESC
+    LIMIT 20
+  master: true
+  metrics:
+    - route:
+        usage: "LABEL"
+        description: "Page route/path"
+    - views:
+        usage: "GAUGE"
+        description: "Total page views in last 24 hours"
+    - unique_users:
+        usage: "GAUGE"
+        description: "Unique users visiting this route in last 24 hours"
+    - avg_duration_seconds:
+        usage: "GAUGE"
+        description: "Average time spent on page in seconds"
+
+# Daily active users trend
+pg_usage_daily_active_users:
+  query: |
+    SELECT
+      DATE(viewed_at) as date,
+      COUNT(DISTINCT user_id) as active_users
+    FROM usage_analytics
+    WHERE viewed_at >= NOW() - INTERVAL '30 days'
+      AND user_id IS NOT NULL
+    GROUP BY DATE(viewed_at)
+    ORDER BY date DESC
+  master: true
+  metrics:
+    - date:
+        usage: "LABEL"
+        description: "Date"
+    - active_users:
+        usage: "GAUGE"
+        description: "Daily active users"
+
+# Hourly page views (last 24 hours)
+pg_usage_hourly_views:
+  query: |
+    SELECT
+      DATE_TRUNC('hour', viewed_at) as hour,
+      COUNT(*) as views,
+      COUNT(DISTINCT user_id) as unique_users
+    FROM usage_analytics
+    WHERE viewed_at >= NOW() - INTERVAL '24 hours'
+    GROUP BY DATE_TRUNC('hour', viewed_at)
+    ORDER BY hour DESC
+  master: true
+  metrics:
+    - hour:
+        usage: "LABEL"
+        description: "Hour timestamp"
+    - views:
+        usage: "GAUGE"
+        description: "Page views in this hour"
+    - unique_users:
+        usage: "GAUGE"
+        description: "Unique users in this hour"
+
+# Top users by activity
+pg_usage_top_users:
+  query: |
+    SELECT
+      user_id::text as user_id,
+      COUNT(*) as page_views,
+      SUM(duration_seconds) as total_time_seconds
+    FROM usage_analytics
+    WHERE viewed_at >= NOW() - INTERVAL '7 days'
+      AND user_id IS NOT NULL
+    GROUP BY user_id
+    ORDER BY page_views DESC
+    LIMIT 10
+  master: true
+  metrics:
+    - user_id:
+        usage: "LABEL"
+        description: "User ID"
+    - page_views:
+        usage: "GAUGE"
+        description: "Total page views by user in last 7 days"
+    - total_time_seconds:
+        usage: "GAUGE"
+        description: "Total time spent by user in seconds"
+
+# Action type distribution
+pg_usage_actions:
+  query: |
+    SELECT
+      COALESCE(action, 'unknown') as action,
+      COUNT(*) as count
+    FROM usage_analytics
+    WHERE viewed_at >= NOW() - INTERVAL '24 hours'
+    GROUP BY action
+  master: true
+  metrics:
+    - action:
+        usage: "LABEL"
+        description: "Action type"
+    - count:
+        usage: "GAUGE"
+        description: "Number of actions in last 24 hours"
+
+# Session metrics
+pg_usage_sessions:
+  query: |
+    SELECT
+      COUNT(DISTINCT session_id) as total_sessions,
+      AVG(session_duration) as avg_session_duration
+    FROM (
+      SELECT
+        session_id,
+        EXTRACT(EPOCH FROM (MAX(viewed_at) - MIN(viewed_at))) as session_duration
+      FROM usage_analytics
+      WHERE viewed_at >= NOW() - INTERVAL '24 hours'
+        AND session_id IS NOT NULL
+      GROUP BY session_id
+    ) as sessions
+  master: true
+  metrics:
+    - total_sessions:
+        usage: "GAUGE"
+        description: "Total sessions in last 24 hours"
+    - avg_session_duration:
+        usage: "GAUGE"
+        description: "Average session duration in seconds"
+
+# Referrer analysis
+pg_usage_referrers:
+  query: |
+    SELECT
+      COALESCE(referrer, 'direct') as referrer,
+      COUNT(*) as views
+    FROM usage_analytics
+    WHERE viewed_at >= NOW() - INTERVAL '24 hours'
+    GROUP BY referrer
+    ORDER BY views DESC
+    LIMIT 10
+  master: true
+  metrics:
+    - referrer:
+        usage: "LABEL"
+        description: "Referrer URL"
+    - views:
+        usage: "GAUGE"
+        description: "Views from this referrer"

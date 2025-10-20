@@ -1,0 +1,33 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@case-study.local'
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://host.docker.internal:3000/api/admin/alerts/webhook'
+        send_resolved: true
+
+  - name: 'email-alerts'
+    email_configs:
+      - to: 'admin@example.com'
+        html: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Labels: {{ range .Labels }}{{ .Name }}: {{ .Value }}{{ end }}
+          {{ end }}
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']
