@@ -1,31 +1,90 @@
-# Invoice Processing System - Architecture Documentation
+# DoxIn - Architecture Documentation
 
 ## Executive Summary
 
-This document provides comprehensive architecture documentation for the Invoice Processing System, a cloud-native application designed for document processing, invoice extraction, and management with real-time capabilities.
+This document provides comprehensive architecture documentation for **DoxIn** (formerly Invoice Processing System), a cloud-native application designed for document processing, invoice extraction, and management with real-time capabilities and AI-powered assistance.
+
+---
+
+## 📚 Architecture Documentation Suite
+
+This is the master architecture document that provides an overview. For detailed architecture documentation, see:
+
+### Production Architecture
+- **[scaled-system.md](scaled-system.md)** - Complete GCP production architecture with Neon DB, Qdrant vector database, and AI chatbot integration
+  - Infrastructure topology and resource specifications
+  - AI/ML architecture with RAG pipeline
+  - Security, monitoring, and deployment strategies
+  - Cost optimization and scaling policies
+
+### Development/Prototype Architecture
+- **[prototype-system.md](prototype-system.md)** - Development architecture featuring self-serving AI agent
+  - AI agent architecture with tool integration
+  - RAG pipeline implementation details
+  - Streaming infrastructure (SSE)
+  - Local development environment setup
+  - Testing strategies and implementation roadmap
+
+### Deployment Guides
+- **[DEPLOYMENT_VERCEL_NEON.md](DEPLOYMENT_VERCEL_NEON.md)** - Vercel + Neon DB deployment guide (Azure variant)
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - General deployment procedures
+
+---
+
+## Quick Architecture Overview
+
+### Target Production Architecture (GCP)
+
+**Platform**: Google Cloud Platform (GCP)
+**Database**: Neon PostgreSQL (serverless)
+**Cache**: Google Cloud Memorystore (Redis)
+**Vector DB**: Qdrant (self-hosted on Cloud Run)
+**Compute**: Cloud Run (serverless containers)
+**AI**: OpenAI GPT-4, Anthropic Claude, Hugging Face
+
+### Key Capabilities
+
+1. **Invoice Processing**
+   - AI-powered document extraction
+   - Real-time WebSocket updates
+   - Batch processing support
+
+2. **AI Chatbot Assistant** (New)
+   - Natural language queries
+   - RAG (Retrieval-Augmented Generation) from documentation
+   - Text-to-SQL for data queries
+   - Streaming responses with SSE
+
+3. **Analytics & Reporting**
+   - Custom report generation
+   - Data visualization
+   - Export capabilities
+
+---
 
 ## Architecture Comparison Analysis
 
-### Current Deployment Options
+### Cloud Platform Evolution
 
-| Approach | Root DEPLOYMENT.md | Backend Docker |
-|----------|-------------------|----------------|
-| **Storage** | Vercel Blob Storage | Azure Blob Storage |
-| **Database** | Azure PostgreSQL | Azure PostgreSQL + Docker |
-| **Cache** | Not specified | Redis (containerized) |
-| **Monitoring** | Azure App Insights + Vercel | Prometheus + Grafana |
-| **Container Strategy** | Azure Container Instances | Azure Container Apps |
-| **Best For** | Simple deployment | Production-ready with monitoring |
+| Aspect | Azure (Original) | GCP (Production Target) |
+|--------|-----------------|------------------------|
+| **Storage** | Azure Blob Storage | Google Cloud Storage |
+| **Database** | Azure PostgreSQL | Neon PostgreSQL (AWS) |
+| **Cache** | Azure Cache for Redis | Memorystore Redis |
+| **Compute** | Azure Container Apps | Cloud Run |
+| **Monitoring** | Azure Monitor + App Insights | Cloud Operations Suite |
+| **Container Registry** | Azure Container Registry | Google Artifact Registry |
+| **Load Balancing** | Azure Front Door | Cloud Load Balancer |
+| **Vector DB** | N/A | Qdrant (Cloud Run) |
+| **Best For** | Enterprise integration | Serverless, cost-effective |
 
-### Recommended Approach: Docker-Based Architecture
+### Why GCP?
 
-The Docker-based approach (`backend/docker/`) is **optimal** for your Azure container goals because:
-
-1. **Complete monitoring stack**: Includes Prometheus, Grafana, AlertManager
-2. **Production-ready**: Redis caching, Celery workers, health checks
-3. **Azure Container Apps compatible**: Easy migration path
-4. **Scalable**: Separate worker processes and monitoring
-5. **Development-friendly**: Local testing matches production
+1. **Better Serverless Model**: Cloud Run provides superior cold starts and pricing
+2. **Cost Optimization**: More predictable pricing for variable workloads
+3. **Global Network**: Superior CDN and edge network integration with Vercel
+4. **Developer Experience**: Simpler deployment model, better CLI tools
+5. **AI/ML Integration**: Native support for AI workloads and streaming
 
 ---
 
@@ -551,15 +610,45 @@ resource "azurerm_container_app" "api" {
 
 ---
 
+---
+
 ## Conclusion
 
-The Docker-based architecture provides the optimal foundation for your Azure container deployment goals, offering:
-
+### Current State (Documented in this file)
+The Docker-based architecture provides a foundation for container deployment with:
 - **Production-ready monitoring** with Prometheus/Grafana
 - **Scalable processing** with Celery workers
 - **High availability** with Redis caching
-- **Clear migration path** to Azure Container Apps
-- **Cost-effective** resource utilization
 - **Developer-friendly** local environment
 
-This architecture supports both your immediate containerization needs and long-term scalability requirements while maintaining operational excellence through comprehensive monitoring and alerting capabilities.
+### Future State (See scaled-system.md)
+The GCP-based production architecture offers enhanced capabilities:
+- **Serverless scaling** with Cloud Run and Neon DB
+- **AI-powered assistance** with RAG chatbot
+- **Cost optimization** through pay-per-use model
+- **Global performance** with CDN and edge computing
+- **Enhanced observability** with Cloud Operations Suite
+
+### Implementation Path
+
+1. **Phase 1**: Continue development with current Docker setup (prototype-system.md)
+2. **Phase 2**: Implement AI chatbot features locally
+3. **Phase 3**: Migrate to GCP Cloud Run (scaled-system.md)
+4. **Phase 4**: Deploy Qdrant and RAG pipeline
+5. **Phase 5**: Production launch with monitoring
+
+---
+
+## Additional Resources
+
+- **[API Documentation](API_DOCUMENTATION.md)** - Complete API reference
+- **[LLM Integration Summary](LLM_INTEGRATION_SUMMARY.md)** - AI/ML implementation details
+- **[Quick Start Guide](QUICK_START.md)** - Fast setup for development
+- **[README](../README.md)** - Project setup and overview
+
+---
+
+**Document Version**: 2.0
+**Last Updated**: 2025-10-20
+**Target Platform**: Google Cloud Platform (GCP)
+**Status**: Planning → Implementation
