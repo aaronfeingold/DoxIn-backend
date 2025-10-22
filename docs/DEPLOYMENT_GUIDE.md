@@ -157,12 +157,6 @@ The docker-compose.yml uses profiles to control which services start:
 # Development with all services
 docker-compose --profile full up -d
 
-# Production services only
-docker-compose --profile production up -d
-
-# Local database + production API
-docker-compose --profile local-db --profile production-api up -d
-
 # Add monitoring to any setup
 docker-compose --profile full --profile monitoring up -d
 ```
@@ -177,13 +171,6 @@ docker-compose --profile full --profile monitoring up -d
 - Redis: Local Redis container
 - Concurrency: 2 workers
 - Debug mode enabled
-
-**Production (`api-production`):**
-- Port: `8000`
-- Database: External Neon
-- Redis: External or container Redis
-- Concurrency: 4 workers
-- Production optimizations
 
 ### Worker Service
 
@@ -203,7 +190,7 @@ All services include health checks:
 
 ```yaml
 healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+  test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
   interval: 30s
   timeout: 10s
   retries: 3
