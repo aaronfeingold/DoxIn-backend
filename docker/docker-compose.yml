@@ -28,7 +28,7 @@ services:
     profiles:
       - api
       - backend
-      - full
+      - dev
 
   redis:
     image: redis:7-alpine
@@ -46,9 +46,10 @@ services:
       timeout: 5s
       retries: 5
     profiles:
+      - prod
       - api
       - backend
-      - full
+      - dev
 
   # Flask API with WebSocket support
   api:
@@ -61,12 +62,7 @@ services:
       - "8000:8000"
     environment:
       # Database Configuration
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-doxin}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-doxin}
-      - POSTGRES_DB=${POSTGRES_DB:-doxin}
-      - POSTGRES_USER=${POSTGRES_USER:-doxin}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
+      - DATABASE_URL=${DATABASE_URL}
 
       # Redis Configuration
       - REDIS_URL=redis://redis:6379/0
@@ -142,9 +138,10 @@ services:
       timeout: 10s
       retries: 3
     profiles:
+      - prod
       - backend
       - api
-      - full
+      - dev
 
   # Celery worker for background processing
   worker:
@@ -155,12 +152,7 @@ services:
     restart: unless-stopped
     environment:
       # Database Configuration
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-doxin}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-doxin}
-      - POSTGRES_DB=${POSTGRES_DB:-doxin}
-      - POSTGRES_USER=${POSTGRES_USER:-doxin}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
+      - DATABASE_URL=${DATABASE_URL}
 
       # Redis Configuration
       - REDIS_URL=redis://redis:6379/0
@@ -210,9 +202,10 @@ services:
       timeout: 10s
       retries: 3
     profiles:
+      - prod
       - backend
       - worker
-      - full
+      - dev
 
   # Celery Flower for monitoring (optional)
   flower:
@@ -233,8 +226,9 @@ services:
         condition: service_healthy
     command: poetry run celery -A app.services.async_processor.celery_app flower --port=5555
     profiles:
+      - prod
       - monitoring
-      - full
+      - dev
 
   # Prometheus - Metrics collection and storage
   prometheus:
@@ -257,8 +251,9 @@ services:
     networks:
       - dox-in-network
     profiles:
+      - prod
       - monitoring
-      - full
+      - dev
     healthcheck:
       test:
         [
@@ -293,8 +288,9 @@ services:
     depends_on:
       - prometheus
     profiles:
+      - prod
       - monitoring
-      - full
+      - dev
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
@@ -320,8 +316,9 @@ services:
     networks:
       - dox-in-network
     profiles:
+      - prod
       - monitoring
-      - full
+      - dev
 
   # PostgreSQL Exporter - Database metrics
   postgres-exporter:
@@ -341,8 +338,9 @@ services:
       postgres:
         condition: service_healthy
     profiles:
+      - prod
       - monitoring
-      - full
+      - dev
 
   # Redis Exporter - Redis metrics
   redis-exporter:
@@ -359,8 +357,9 @@ services:
       redis:
         condition: service_healthy
     profiles:
+      - prod
       - monitoring
-      - full
+      - dev
 
   # AlertManager - Alert handling and notifications
   alertmanager:
@@ -381,8 +380,9 @@ services:
     depends_on:
       - prometheus
     profiles:
+      - prod
       - monitoring
-      - full
+      - dev
 
 volumes:
   postgres_data:
