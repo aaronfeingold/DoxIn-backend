@@ -26,10 +26,8 @@ services:
       timeout: 5s
       retries: 5
     profiles:
-      - local-db
       - api
-      - worker
-      - monitoring
+      - backend
       - full
 
   redis:
@@ -48,10 +46,8 @@ services:
       timeout: 5s
       retries: 5
     profiles:
-      - local-db
       - api
-      - worker
-      - monitoring
+      - backend
       - full
 
   # Flask API with WebSocket support
@@ -65,7 +61,7 @@ services:
       - "8000:8000"
     environment:
       # Database Configuration
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-doxin}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-doxin}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-doxin}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-doxin}
       - POSTGRES_DB=${POSTGRES_DB:-doxin}
       - POSTGRES_USER=${POSTGRES_USER:-doxin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
@@ -141,111 +137,14 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     profiles:
+      - backend
       - api
       - full
-
-  # Production API with Neon DB (no local postgres dependency)
-  api-production:
-    build:
-      context: ../api
-      dockerfile: Dockerfile
-    container_name: dox-in-api-prod
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      # Database Configuration (Neon)
-      - DATABASE_URL=${NEON_DATABASE_URL}
-      - NEON_DATABASE_URL=${NEON_DATABASE_URL}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-
-      # Redis Configuration (External or Container)
-      - REDIS_URL=${PRODUCTION_REDIS_URL:-redis://redis:6379/0}
-      - CELERY_BROKER_URL=${PRODUCTION_REDIS_URL:-redis://redis:6379/0}
-      - CELERY_RESULT_BACKEND=${PRODUCTION_REDIS_URL:-redis://redis:6379/1}
-      - PRODUCTION_REDIS_URL=${PRODUCTION_REDIS_URL}
-      - CONTAINER_REDIS_URL=redis://redis:6379/0
-      - CONTAINER_CELERY_BROKER_URL=redis://redis:6379/0
-      - CONTAINER_CELERY_RESULT_BACKEND=redis://redis:6379/1
-
-      # Environment Settings
-      - FLASK_ENV=production
-      - ENVIRONMENT=production
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=false
-
-      # AI/LLM Configuration
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - DEFAULT_LLM_MODEL=${DEFAULT_LLM_MODEL:-gpt-4o}
-      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.8}
-
-      # File Storage
-      - BLOB_READ_WRITE_TOKEN=${BLOB_READ_WRITE_TOKEN}
-      - UPLOAD_FOLDER=${UPLOAD_FOLDER:-./uploads}
-
-      # Frontend & CORS
-      - FRONTEND_URL=${FRONTEND_URL:-https://your-app.vercel.app}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
-      - CORS_ORIGINS=${CORS_ORIGINS}
-
-      # WebSocket Configuration
-      - WEBSOCKET_ASYNC_MODE=${WEBSOCKET_ASYNC_MODE:-eventlet}
-      - WEBSOCKET_LOGGER=${WEBSOCKET_LOGGER:-false}
-
-      # Security
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - SSL_DISABLE=${SSL_DISABLE:-false}
-      - SECURE_HEADERS=${SECURE_HEADERS:-true}
-      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-true}
-      - SESSION_COOKIE_HTTPONLY=${SESSION_COOKIE_HTTPONLY:-true}
-
-      # Application Settings
-      - APP_VERSION=${APP_VERSION:-1.0.0}
-      - MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH:-16777216}
-      - BATCH_PROCESSING_SIZE=${BATCH_PROCESSING_SIZE:-10}
-      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-4}
-      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-300}
-
-      # Monitoring & Metrics
-      - METRICS_ENABLED=${METRICS_ENABLED:-true}
-      - PROMETHEUS_METRICS_PATH=${PROMETHEUS_METRICS_PATH:-/metrics}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}
-      - HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-10}
-      - ENABLE_PROFILING=${ENABLE_PROFILING:-false}
-
-      # Embedding Configuration
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1536}
-
-      # Python Path
-      - PYTHONPATH=/app
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - dox-in-network
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    profiles:
-      - production
-      - production-api
 
   # Celery worker for background processing
   worker:
@@ -311,78 +210,9 @@ services:
       timeout: 10s
       retries: 3
     profiles:
+      - backend
       - worker
-      - monitoring
       - full
-
-  # Production Celery worker with Neon DB
-  worker-production:
-    build:
-      context: ../api
-      dockerfile: Dockerfile
-    container_name: dox-in-worker-prod
-    restart: unless-stopped
-    environment:
-      # Database Configuration (Neon)
-      - DATABASE_URL=${NEON_DATABASE_URL}
-      - NEON_DATABASE_URL=${NEON_DATABASE_URL}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-
-      # Redis Configuration
-      - REDIS_URL=${PRODUCTION_REDIS_URL:-redis://redis:6379/0}
-      - CELERY_BROKER_URL=${PRODUCTION_REDIS_URL:-redis://redis:6379/0}
-      - CELERY_RESULT_BACKEND=${PRODUCTION_REDIS_URL:-redis://redis:6379/1}
-      - PRODUCTION_REDIS_URL=${PRODUCTION_REDIS_URL}
-
-      # Environment Settings
-      - FLASK_ENV=production
-      - ENVIRONMENT=production
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=false
-
-      # AI/LLM Configuration
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - DEFAULT_LLM_MODEL=${DEFAULT_LLM_MODEL:-gpt-4o}
-      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.8}
-
-      # File Storage
-      - BLOB_READ_WRITE_TOKEN=${BLOB_READ_WRITE_TOKEN}
-
-      # Worker Configuration
-      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-4}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-
-      # Python Path
-      - PYTHONPATH=/app
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - dox-in-network
-    depends_on:
-      redis:
-        condition: service_healthy
-    command: poetry run celery -A app.services.async_processor.celery_app worker --loglevel=INFO --concurrency=4 --hostname=worker-prod@%h
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "poetry",
-          "run",
-          "celery",
-          "-A",
-          "app.services.async_processor.celery_app",
-          "inspect",
-          "ping",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    profiles:
-      - production
-      - production-worker
 
   # Celery Flower for monitoring (optional)
   flower:
