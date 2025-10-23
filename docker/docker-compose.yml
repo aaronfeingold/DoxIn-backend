@@ -29,6 +29,7 @@ services:
       - api
       - backend
       - dev
+      - worker
 
   redis:
     image: redis:7-alpine
@@ -49,6 +50,7 @@ services:
       - prod
       - api
       - backend
+      - worker
       - dev
 
   # Flask API with WebSocket support
@@ -141,11 +143,6 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
-
-      # Environment Settings
-      - FLASK_ENV=${FLASK_ENV:-development}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
 
       # AI/LLM Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY}
